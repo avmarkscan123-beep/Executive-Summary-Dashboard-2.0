@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Digital Content Protection Dashboard</title>
+
+<!-- Libraries are loaded from public CDNs so the project stays free and can be deployed on Vercel/GitHub Pages. -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+
+<style>
+:root{
+  --bg:#eef1f5;
+  --panel:#ffffff;
+  --panel2:#f5f6f8;
+  --text:#12243a;
+  --muted:#6d7b8f;
+  --line:#d6dce5;
+  --navy:#17365d;
+  --blue:#315f91;
+  --orange:#f4a43a;
+  --orange2:#ffbf5b;
+  --dark:#17212f;
+  --shadow:0 2px 10px rgba(17,35,58,.08);
+  --radius:10px;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Arial,Helvetica,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+}
+button,input,select{font:inherit}
+.app{min-height:100vh;padding:18px}
+.toolbar{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:12px;
+  box-shadow:var(--shadow);
+  padding:12px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  align-items:center;
+}
+.brand{
+  font-size:18px;
+  font-weight:800;
+  color:var(--navy);
+  margin-right:10px;
+}
+.fileBtn,.btn{
+  border:1px solid var(--line);
+  background:#fff;
+  color:var(--text);
+  border-radius:7px;
+  padding:8px 11px;
+  cursor:pointer;
+}
+.btn.primary{background:var(--navy);color:#fff;border-color:var(--navy)}
+.btn.accent{background:var(--orange);color:#16243a;border-color:var(--orange)}
+.btn:hover{filter:brightness(.97)}
+.fileName{
+  max-width:230px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:var(--muted);
+  font-size:12px;
+}
+.filters{
+  margin-top:10px;
+  display:grid;
+  grid-template-columns:repeat(7,minmax(130px,1fr));
+  gap:8px;
+}
+.filter{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:9px;
+  padding:7px;
+}
+.filter label{
+  display:block;
+  font-size:10px;
+  font-weight:700;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin-bottom:4px;
+}
+.filter select,.filter input{
+  width:100%;
+  border:0;
+  outline:0;
+  background:transparent;
+  color:var(--text);
+}
+.status{
+  margin-top:8px;
+  color:var(--muted);
+  font-size:12px;
+  min-height:18px;
+}
+.kpis{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:10px;
+  margin-top:10px;
+}
+.kpi{
+  background:var(--kpiBlue,#dceaf7);
+  border:1px solid var(--line);
+  border-radius:10px;
+  box-shadow:var(--shadow);
+  padding:13px 15px;
+  min-height:86px;
+  position:relative;
+  overflow:hidden;
+}
+.kpi:after{
+  content:"";
+  position:absolute;
+  left:0;top:0;bottom:0;width:5px;
+  background:var(--navy);
+}
+.kpi.accent{background:var(--kpiYellow,#ffd36b);border-color:#f0b83f}
+.kpi.accent:after{background:#f0a900}
+.kpi .label{
+  font-size:11px;
+  text-transform:uppercase;
+  font-weight:800;
+  color:var(--muted);
+}
+.kpi .value{
+  margin-top:8px;
+  font-size:25px;
+  line-height:1;
+  font-weight:800;
+  color:var(--navy);
+}
+.kpi .sub{
+  margin-top:5px;
+  font-size:10px;
+  color:var(--muted);
+}
+.grid{
+  margin-top:10px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+.card{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:10px;
+  box-shadow:var(--shadow);
+  padding:12px;
+  min-height:300px;
+}
+.card.wide{grid-column:1/-1}
+.card h3{
+  margin:0 0 9px;
+  font-size:14px;
+  color:var(--navy);
+}
+.chartWrap{height:260px;position:relative}
+.empty{
+  height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#8a96a6;
+  font-size:13px;
+  text-align:center;
+}
+.topTable{
+  width:100%;
+  border-collapse:collapse;
+  font-size:12px;
+}
+.topTable th,.topTable td{
+  padding:7px 6px;
+  border-bottom:1px solid #e7ebf0;
+  text-align:left;
+}
+.topTable th{color:var(--muted);font-size:10px;text-transform:uppercase}
+.controls{
+  margin-left:auto;
+  display:flex;
+  gap:5px;
+  align-items:center;
+}
+.zoomValue{
+  min-width:55px;
+  text-align:center;
+  font-size:12px;
+  color:var(--muted);
+}
+.footer{
+  text-align:center;
+  color:var(--muted);
+  font-size:11px;
+  padding:15px 0 5px;
+}
+@media(max-width:1100px){
+  .filters{grid-template-columns:repeat(4,1fr)}
+  .kpis{grid-template-columns:repeat(3,1fr)}
+}
+@media(max-width:700px){
+  .app{padding:8px}
+  .filters{grid-template-columns:1fr 1fr}
+  .kpis{grid-template-columns:1fr 1fr}
+  .grid{grid-template-columns:1fr}
+  .card.wide{grid-column:auto}
+}
+
+.summaryPage{margin-top:12px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);padding:10px}
+.summaryToolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.summaryTitle{font-size:16px;font-weight:800;color:#102A4C}
+.summaryCanvas{position:relative;width:100%;max-width:1692px;margin:0 auto;aspect-ratio:1692/778;overflow:hidden}
+.summaryTemplate{position:absolute;inset:0;width:100%;height:100%;object-fit:fill}
+.sumText{position:absolute;font-family:Arial,Helvetica,sans-serif;font-weight:700;color:#7F8FA3;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:transparent;padding:0;box-sizing:border-box;z-index:3}
+.sumLabel{color:#102A4C;font-size:clamp(12px,1.35vw,21px);font-weight:800;text-align:center;background:#F1F3F6!important;padding:2px 4px;border-radius:2px;z-index:8;display:flex;align-items:center;justify-content:center}
+.sumValue{color:#7F8FA3;font-size:clamp(28px,3.8vw,62px);font-weight:700}
+.sum1{left:9.5%;top:17.0%;width:14.5%;height:12%;text-align:center}
+.sum2{left:27.0%;top:6.0%;width:24.0%;height:7%;text-align:center;font-size:clamp(9px,1.05vw,17px)}
+.sum2v{left:33.5%;top:17.0%;width:14.5%;height:12%;text-align:center}
+.sum3{left:51.0%;top:6.0%;width:26.0%;height:7%;text-align:center;font-size:clamp(9px,1.05vw,17px)}
+.sum3v{left:58.0%;top:17.0%;width:15.0%;height:12%;text-align:center}
+.sum4{left:84.3%;top:17.0%;width:13.0%;height:12%;text-align:center}
+.sum5{left:8.0%;top:50.0%;width:15.0%;height:12%;text-align:center;font-size:clamp(24px,3.3vw,55px)}
+.sum6{left:34.5%;top:50.0%;width:15.0%;height:12%;text-align:center;font-size:clamp(24px,3.3vw,55px)}
+.sum7{left:60.0%;top:50.0%;width:13.0%;height:12%;text-align:center;font-size:clamp(24px,3.3vw,55px)}
+.sum8{left:86.0%;top:50.0%;width:12.0%;height:12%;text-align:center;font-size:clamp(24px,3.3vw,55px)}
+.sum9{left:10.0%;top:82.5%;width:13.0%;height:12%;text-align:center;font-size:clamp(24px,3.3vw,55px)}
+.sum10{left:34.5%;top:82.5%;width:15.0%;height:12%;text-align:center;font-size:clamp(24px,3.3vw,55px)}
+.sum11label{left:53.5%;top:71.5%;width:23.5%;height:7%;font-size:clamp(10px,1.05vw,17px);color:#102A4C;text-align:center;text-transform:uppercase;background:#FFFFFF!important;padding:2px 4px;z-index:8;display:flex;align-items:center;justify-content:center}
+.sum11{left:0;top:0;width:0;height:0;display:none}
+.sum11a,.sum11b{left:58.0%;width:18.0%;font-size:clamp(10px,1.0vw,17px);font-weight:500;color:#7F8FA3;text-align:left}
+.sum11a{top:83.5%}.sum11b{top:91.0%}
+.sum12a,.sum12b{left:83.0%;width:16.0%;font-size:clamp(10px,1.0vw,17px);font-weight:500;color:#fff;text-align:left}
+.sum12a{top:84.0%}.sum12b{top:92.0%}
+.summaryNote{padding:8px 4px 2px;color:#68778A;font-size:11px}
+@media(max-width:900px){.summaryToolbar{flex-wrap:wrap}.summaryTitle{order:-1;width:100%}}
+</style>
+</head>
+
+<body>
+<div class="app" id="app">
+
+  <div class="toolbar">
+    <div class="brand">EXECUTIVE • CONTENT PROTECTION</div>
+
+    <span class="fileName" id="fileName">Data source: dashboard-data.xlsx</span>
+    <button class="btn accent" id="downloadSourceBtn" disabled>Download Source Excel</button>
+    <button class="btn" id="resetBtn">Reset Filters</button>
+    <button class="btn" id="summaryBtn">Executive Summary</button>
+
+    <div class="controls">
+      <button class="btn" id="zoomOut">−</button>
+      <span class="zoomValue" id="zoomValue">100%</span>
+      <button class="btn" id="zoomIn">+</button>
+      <button class="btn" id="zoomReset">Reset Zoom</button>
+      <select class="btn" id="themeSelect" title="Dashboard theme">
+        <option value="iphouse">IP House</option>
+        <option value="sample">Sample Light Blue / Yellow</option>
+        <option value="dark">Dark / Grey</option>
+        <option value="slate">Slate / Blue</option>
+        <option value="amber">Grey / Amber</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="filters">
+    <div class="filter"><label>Platform</label><select id="platformFilter"><option value="">All</option></select></div>
+    <div class="filter"><label>Asset</label><select id="assetFilter"><option value="">All</option></select></div>
+    <div class="filter"><label>Language</label><select id="languageFilter"><option value="">All</option></select></div>
+    <div class="filter"><label>Content Type</label><select id="contentFilter"><option value="">All</option></select></div>
+    <div class="filter"><label>Week</label><select id="weekFilter"><option value="">All</option></select></div>
+  </div>
+
+  <div class="status" id="status">Loading dashboard-data.xlsx…</div>
+
+  <section class="kpis">
+    <div class="kpi"><div class="label">Infringements Identified</div><div class="value" id="kpiIdentified">0</div><div class="sub">Total identified records</div></div>
+    <div class="kpi"><div class="label">Top Platform</div><div class="value" id="kpiPlatform">0</div><div class="sub" id="kpiPlatformSub">No platform</div></div>
+    <div class="kpi"><div class="label">Top Asset</div><div class="value" id="kpiTopAsset">—</div><div class="sub" id="kpiTopAssetSub">No asset data</div></div>
+    <div class="kpi accent"><div class="label">Overall Removal Rate</div><div class="value" id="kpiRemoval">0%</div><div class="sub">Removed ÷ identified</div></div>
+    <div class="kpi"><div class="label">Active Backlog</div><div class="value" id="kpiBacklog">0</div><div class="sub">Identified but not removed</div></div>
+    <div class="kpi"><div class="label">Repeat Offenders</div><div class="value" id="kpiRepeat">0</div><div class="sub" id="kpiRepeatSub">No repeat source data</div></div>
+    <div class="kpi"><div class="label">Top Active Source</div><div class="value" id="kpiActiveSource">—</div><div class="sub" id="kpiActiveSourceSub">No active source data</div></div>
+    <div class="kpi"><div class="label">Platform-wise Removal Rate</div><div class="value" id="kpiPlatformRemoval">0%</div><div class="sub" id="kpiPlatformRemovalSub">No platform data</div></div>
+    <div class="kpi"><div class="label">Asset-wise Removal Rate</div><div class="value" id="kpiAssetRemoval">0%</div><div class="sub" id="kpiAssetRemovalSub">No asset data</div></div>
+    <div class="kpi"><div class="label">Suspended Profiles</div><div class="value" id="kpiSuspendedProfiles">0</div><div class="sub" id="kpiSuspendedProfilesSub">Unique suspended profiles</div></div>
+    <div class="kpi"><div class="label">Impacted Subscribers</div><div class="value" id="kpiImpactedSubscribers">0</div><div class="sub" id="kpiImpactedSubscribersSub">Subscribers from suspended profiles</div></div>
+    <div class="kpi"><div class="label">Linking URLs Delisted</div><div class="value" id="kpiLinking">0%</div><div class="sub" id="kpiLinkingSub">Linking URL removal rate</div></div>
+  </section>
+
+  <section class="grid">
+    <div class="card">
+      <h3>Platform-wise Infringements</h3>
+      <div class="chartWrap"><canvas id="platformChart"></canvas><div class="empty" id="platformEmpty" style="display:none">No data</div></div>
+    </div>
+
+    <div class="card">
+      <h3>Active vs Removed</h3>
+      <div class="chartWrap"><canvas id="statusChart"></canvas><div class="empty" id="statusEmpty" style="display:none">No data</div></div>
+    </div>
+
+    <div class="card">
+      <h3>Weekly Infringement Trend</h3>
+      <div class="chartWrap"><canvas id="weeklyChart"></canvas><div class="empty" id="weeklyEmpty" style="display:none">No Week values found</div></div>
+    </div>
+
+    <div class="card">
+      <h3>Day-wise Infringements</h3>
+      <div class="chartWrap"><canvas id="dayChart"></canvas><div class="empty" id="dayEmpty" style="display:none">No Day values found</div></div>
+    </div>
+
+    <div class="card">
+      <h3>Top 10 Assets — Name & Count</h3>
+      <div class="chartWrap"><canvas id="assetChart"></canvas><div class="empty" id="assetEmpty" style="display:none">No asset/title column found</div></div>
+    </div>
+
+    <div class="card">
+      <h3>Language-wise Infringements</h3>
+      <div class="chartWrap"><canvas id="languageChart"></canvas><div class="empty" id="languageEmpty" style="display:none">No language column found</div></div>
+    </div>
+
+    <div class="card">
+      <h3>Content Type</h3>
+      <div class="chartWrap"><canvas id="contentChart"></canvas><div class="empty" id="contentEmpty" style="display:none">No content type column found</div></div>
+    </div>
+
+    <div class="card">
+      <h3>Top 10 Sources / Domains</h3>
+      <div class="chartWrap"><canvas id="sourceChart"></canvas><div class="empty" id="sourceEmpty" style="display:none">No source/domain/host column found</div></div>
+    </div>
+
+    <div class="card wide">
+      <h3>Analyst-wise Infringements</h3>
+      <div class="chartWrap"><canvas id="analystChart"></canvas><div class="empty" id="analystEmpty" style="display:none">No analyst column found</div></div>
+    </div>
+  </section>
+
+  <section id="summaryPage" class="summaryPage" style="display:none">
+    <div class="summaryToolbar">
+      <button class="btn" id="backDashboardBtn">← Dashboard</button>
+      <div class="summaryTitle">IP House — Executive Quick Report</div>
+    </div>
+    <div class="summaryCanvas">
+      <img src="ip-house-summary-clean2.png" alt="IP House Executive Summary" class="summaryTemplate">
+      <div class="sumText sumValue sum1" id="sumIdentified">~0</div>
+      <div class="sumText sumLabel sum2" id="sumPlatformName">Top Platform</div>
+      <div class="sumText sumValue sum2v" id="sumPlatformCount">0</div>
+      <div class="sumText sumLabel sum3" id="sumAssetName">Top Asset</div>
+      <div class="sumText sumValue sum3v" id="sumAssetCount">0</div>
+      <div class="sumText sumValue sum4" id="sumRemoval">0%</div>
+      <div class="sumText sumValue sum5" id="sumLinking">~0%</div>
+      <div class="sumText sumValue sum6" id="sumMetaRemoval">0%</div>
+      <div class="sumText sumValue sum7" id="sumAccounts">0</div>
+      <div class="sumText sumValue sum8" id="sumSubscribers">0</div>
+      <div class="sumText sumValue sum9" id="sumMetaAccounts">0</div>
+      <div class="sumText sumValue sum10" id="sumMetaSubscribers">0</div>
+      <div class="sumText sum11label" id="sumNewTitleLabel">0- NEW RELEASED TITLES</div>
+      <div class="sumText sum11" id="sumNewTitles">0</div>
+      <div class="sumText sum11a" id="sumNewIdentified">Identified Links : 0</div>
+      <div class="sumText sum11b" id="sumNewRemoved">Removed : 0 (0%)</div>
+      <div class="sumText sum12a" id="sumRegionalIdentified">Identified – 0</div>
+      <div class="sumText sum12b" id="sumRegionalRestricted">Restricted – 0 (0%)</div>
+    </div>
+    <div class="summaryNote">All values on this page are recalculated from the currently uploaded and filtered data. Where the uploaded file does not contain a required field, the corresponding metric is shown as 0.</div>
+  </section>
+
+  <div class="footer">Dashboard recalculates directly from the latest dashboard-data.xlsx file. Action KPIs include Active Backlog, Repeat Offenders, Top Active Source, Platform-wise Removal Rate, Asset-wise Removal Rate, Suspended Profiles and Impacted Subscribers. Suspended Profiles are unique profiles with Profile Status marked as suspended; Impacted Subscribers are summed once per unique suspended profile.</div>
+</div>
+
+<script>
+/* FAST V5 ENGINE
+   - Detect columns once per upload
+   - Filter the raw data once
+   - Aggregate all dashboard metrics in one pass
+   - Reuse Chart.js instances instead of destroying/recreating them
+   - Render charts in small idle-time batches so KPIs appear immediately
+*/
+let rawRows = [];
+let filteredRows = [];
+let charts = {};
+let pendingFile = null;
+let zoom = 1;
+let detected = {};
+let renderToken = 0;
+
+const SYNONYMS = {
+  platform:["Platform","platform","Channel Platform","Source Platform","Media Platform"],
+  asset:["Asset","asset","Title","title","Content Title","ContentTitle","Program","Show","Movie"],
+  language:["Language","language","Lang"],
+  content:["Content Type","content type","ContentType","Type","Genre"],
+  week:["Week","week","Week Number","Week No","Week_Number"],
+  day:["Day","day","Date Day"],
+  date:["Date","date","Discovery Date","Discovery Date At","Identified Date","Identified Date At","Identification Date","IdentifiedDate","DiscoveryDate","Upload Date","Created Date"],
+  reportedDate:["Report Date","Reported Date","Reported On","Date Reported","Reporting Date","Takedown Report Date"],
+  takedownDate:["Removal Date","Removed Date","Takedown Date","Takedown Completed Date","Delisted Date","Delist Date","Date Removed","Action Date"],
+  source:["Source","source","Domain","domain","Website","Source Domain","Source/Domain","Host","Host Domain","Source Website","Website Domain","URL Domain","Link Domain"],
+  links:["Links","Link","URL","URLs","Url","Video URL","Video URLs"],
+  analyst:["Analyst","analyst","Analyst Name","Discovery Done By","Discovery Done by","Discovery By","Identified By","Done By","Handled By"],
+  profileUrl:["Profile URLs","Profile URL","Profile Url","Account URL","Account URLs","Channel URL"],
+  profileStatus:["Profile Status","Profile status","Account Status","Account status"],
+  subscribers:["Subscribers","Subscriber","Subscriber Count","Followers","Follower Count"],
+  category:["Category","category","Content Category"],
+  region:["Country/ Region","Country/Region","Region","Country","Geo","Geography"],
+  infringementType:["Infringement Type","Infringement-Type","InfringementType","Violation Type","URL Type","Asset Type"],
+  status:["Status","status"],
+  removal:["Removal Status","Removal status","Status","status","Takedown Status","TakedownStatus","Removal","Removed"],
+  reported:["Reported","reported","Report Status","ReportStatus"]
+};
+
+function norm(v){return String(v??"").trim()}
+function key(s){return norm(s).toLowerCase().replace(/[^a-z0-9]/g,"")}
+function findCol(rows,names){
+  if(!rows.length)return null;
+  const cols=Object.keys(rows[0]), byKey={};
+  for(const c of cols)byKey[key(c)]=c;
+  for(const n of names)if(byKey[key(n)])return byKey[key(n)];
+  for(const c of cols){const ck=key(c);for(const n of names){const nk=key(n);if(ck.includes(nk)||nk.includes(ck))return c}}
+  return null;
+}
+function detectCols(){
+  detected={
+    platform:findCol(rawRows,SYNONYMS.platform),asset:findCol(rawRows,SYNONYMS.asset),
+    language:findCol(rawRows,SYNONYMS.language),content:findCol(rawRows,SYNONYMS.content),
+    week:findCol(rawRows,SYNONYMS.week),day:findCol(rawRows,SYNONYMS.day),date:findCol(rawRows,SYNONYMS.date),reportedDate:findCol(rawRows,SYNONYMS.reportedDate),takedownDate:findCol(rawRows,SYNONYMS.takedownDate),
+    source:findCol(rawRows,SYNONYMS.source),links:findCol(rawRows,SYNONYMS.links),analyst:findCol(rawRows,SYNONYMS.analyst),
+    profileUrl:findCol(rawRows,SYNONYMS.profileUrl),profileStatus:findCol(rawRows,SYNONYMS.profileStatus),subscribers:findCol(rawRows,SYNONYMS.subscribers),category:findCol(rawRows,SYNONYMS.category),region:findCol(rawRows,SYNONYMS.region),
+    infringementType:findCol(rawRows,SYNONYMS.infringementType),status:findCol(rawRows,SYNONYMS.status),removal:findCol(rawRows,SYNONYMS.removal),reported:findCol(rawRows,SYNONYMS.reported)
+  };
+  return detected;
+}
+function cols(){return detected}
+function val(row,col){return col?norm(row[col]):""}
+function uniqueValues(rows,col){
+  if(!col)return [];
+  const set=new Set(); for(const r of rows){const v=val(r,col);if(v)set.add(v)}
+  return [...set].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true,sensitivity:"base"}));
+}
+function fillSelect(id,values){
+  const el=document.getElementById(id),old=el.value;
+  el.innerHTML='<option value="">All</option>';
+  for(const v of values){const o=document.createElement("option");o.value=v;o.textContent=v;el.appendChild(o)}
+  if(values.includes(old))el.value=old;
+}
+function parseDate(v){
+  if(v instanceof Date&&!isNaN(v))return v;
+  if(typeof v==="number"){const d=new Date(Math.round((v-25569)*86400*1000));return isNaN(d)?null:d}
+  const s=norm(v);if(!s)return null;const d=new Date(s);if(!isNaN(d))return d;
+  const m=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);if(m)return new Date(+m[3],+m[2]-1,+m[1]);return null;
+}
+function isoDate(v){const d=parseDate(v);if(!d)return "";return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
+function isRemoved(v){
+  const s=key(v);if(!s)return false;
+  return ["removed","remove","successfullyremoved","taken down","takedown","takedowncompleted","delisted","delist","de-listed","deleted","blocked","closed","suspended","disabled"].some(x=>s.includes(key(x)));
+}
+function fmt(n){return Number(n||0).toLocaleString("en-IN")}
+function pct(n,d){return d?((n/d)*100).toFixed(1)+"%":"0%"}
+function topN(map,n=10){return [...map.entries()].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0])).slice(0,n).map(([label,count])=>({label,count}))}
+function add(map,v){v=v||"Unknown";map.set(v,(map.get(v)||0)+1)}
+function sortWeek(a,b){const na=parseInt(String(a.label).match(/\d+/)?.[0]||"",10),nb=parseInt(String(b.label).match(/\d+/)?.[0]||"",10);if(Number.isFinite(na)&&Number.isFinite(nb))return na-nb;return a.label.localeCompare(b.label,undefined,{numeric:true})}
+function sortDay(a,b){const order={sun:0,sunday:0,mon:1,monday:1,tue:2,tuesday:2,wed:3,wednesday:3,thu:4,thursday:4,fri:5,friday:5,sat:6,saturday:6};const aa=order[key(a.label)],bb=order[key(b.label)];if(aa!==undefined&&bb!==undefined)return aa-bb;return a.label.localeCompare(b.label,undefined,{numeric:true})}
+function extractDomain(v){
+  const s=norm(v);if(!s)return "";try{const u=new URL(/^https?:\/\//i.test(s)?s:"https://"+s);return u.hostname.replace(/^www\./i,"")}catch(e){const m=s.match(/(?:https?:\/\/)?(?:www\.)?([^\/\s?#]+)/i);return m?m[1].replace(/^www\./i,""):s}
+}
+function isLinkingValue(v){
+  const s=key(v);
+  return s==='linking' || s==='linkingurl' || s==='linkingurls' || s.includes('linkingurl');
+}
+function linkingRow(r,c){
+  // A record is a Linking URL only when the dataset explicitly labels the
+  // platform/type/category as Linking URL(s). Do not classify arbitrary
+  // source URLs containing the word "linking" as Linking URL records.
+  const fields=[c.platform,c.infringementType,c.category,c.content].filter(Boolean);
+  return fields.some(col=>isLinkingValue(val(r,col)));
+}
+function statusChartCategory(v){
+  const raw=norm(v).trim().toLowerCase();
+  if(!raw) return null;
+  if(raw === "removed" || raw === "delisted") return "Removed";
+  if(raw === "-" || raw === "active") return "Active";
+  return null;
+}
+function isLinkingUrlDelistedStatus(v){
+  // Linking URL Delisted KPI: this is evaluated ONLY for rows already
+  // identified as Linking URL/Linking records. In those rows, a Status of
+  // "Delisted" (or the explicit "Linking URL Delisted" label) is delisted.
+  // Other statuses such as Reported/Active are not counted.
+  const s=key(v);
+  return s==='delisted' || s==='linkingurldelisted';
+}
+
+function applyFilters(){
+  const c=cols(),pf=document.getElementById("platformFilter").value,af=document.getElementById("assetFilter").value,
+        lf=document.getElementById("languageFilter").value,cf=document.getElementById("contentFilter").value,wf=document.getElementById("weekFilter").value;
+  const out=[];
+  for(const r of rawRows){
+    if(pf&&val(r,c.platform)!==pf)continue;if(af&&val(r,c.asset)!==af)continue;if(lf&&val(r,c.language)!==lf)continue;
+    if(cf&&val(r,c.content)!==cf)continue;if(wf&&val(r,c.week)!==wf)continue;
+    out.push(r);
+  }
+  return out;
+}
+
+function getUploadedDateBounds(){
+  const c=cols();
+  if(!c.date)return {min:"",max:"",count:0};
+  let min="",max="",count=0;
+  for(const r of rawRows){
+    const d=parseDate(r[c.date]);
+    if(!d)continue;
+    const ds=isoDate(d);
+    if(!ds)continue;
+    if(!min||ds<min)min=ds;
+    if(!max||ds>max)max=ds;
+    count++;
+  }
+  return {min,max,count};
+}
+
+function updateDateRange(){
+  const fromEl=document.getElementById("fromDate"),toEl=document.getElementById("toDate");
+  const bounds=getUploadedDateBounds();
+  if(!bounds.min||!bounds.max){
+    fromEl.min="";fromEl.max="";toEl.min="";toEl.max="";
+    fromEl.value="";toEl.value="";
+    return;
+  }
+  // The date controls are limited strictly to dates present in the uploaded file.
+  fromEl.min=bounds.min;fromEl.max=bounds.max;
+  toEl.min=bounds.min;toEl.max=bounds.max;
+  fromEl.value=bounds.min;
+  toEl.value=bounds.max;
+}
+
+function buildSummary(rows,c){
+  const s={platform:new Map(),asset:new Map(),language:new Map(),content:new Map(),week:new Map(),day:new Map(),source:new Map(),analyst:new Map(),identified:rows.length,removed:0,linking:0,statusChart:{Active:0,Removed:0}};
+  for(const r of rows){
+    if(c.platform)add(s.platform,val(r,c.platform));
+    if(c.asset)add(s.asset,val(r,c.asset));
+    if(c.language)add(s.language,val(r,c.language));
+    if(c.content)add(s.content,val(r,c.content));
+    if(c.week){const v=val(r,c.week);if(v)add(s.week,v)}
+    if(c.day){const v=val(r,c.day);if(v)add(s.day,v)}
+    else if(c.date){const d=parseDate(r[c.date]);if(d)add(s.day,d.toLocaleDateString("en-US",{weekday:"long"}))}
+    if(c.source){const sv=val(r,c.source);if(sv)add(s.source,extractDomain(sv)||sv)}
+    if(c.links && (!c.source || !val(r,c.source))){const lv=val(r,c.links);if(lv)add(s.source,extractDomain(lv)||"Unknown")}
+    if(c.analyst)add(s.analyst,val(r,c.analyst));
+    if(c.removal){
+      const removalStatus=val(r,c.removal);
+      if(isRemoved(removalStatus)){s.removed++;if(linkingRow(r,c))s.linking++}
+    }
+    // Linking chart/KPI status is driven by the dedicated Status column when available.
+    // This prevents a separate Removal Status column from being mistaken for the status used for delisting.
+    if(c.status){
+      const chartStatus=statusChartCategory(val(r,c.status));
+      if(chartStatus && linkingRow(r,c)) s.statusChart[chartStatus]++;
+    }
+  }
+  return s;
+}
+
+const IP_HOUSE_PALETTE=["#FF914D","#7F8FA3","#17365D","#AEB8C4","#D9E0E7"];
+const IP_HOUSE_KPI_BLUE="#DCE8F3";
+const IP_HOUSE_KPI_YELLOW="#FFC86A";
+const chartBase={responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false},tooltip:{displayColors:false}},scales:{x:{grid:{display:false},ticks:{color:"#68778a",font:{size:10}}},y:{grid:{display:false},ticks:{color:"#68778a",font:{size:10}}}}};
+function getEmpty(id){return document.getElementById(id.replace("Chart","Empty"))}
+function makeBar(id,items,horizontal=false){
+  const el=document.getElementById(id),empty=getEmpty(id);if(!items.length){if(charts[id]){charts[id].data.labels=[];charts[id].data.datasets[0].data=[];charts[id].update("none")}el.style.display="none";empty.style.display="flex";return}
+  el.style.display="block";empty.style.display="none";const labels=items.map(x=>x.label),data=items.map(x=>x.count);
+  const colors=labels.map((_,i)=>i===0?IP_HOUSE_PALETTE[0]:IP_HOUSE_PALETTE[1]);
+  if(charts[id]){charts[id].data.labels=labels;charts[id].data.datasets[0].data=data;charts[id].data.datasets[0].backgroundColor=colors;charts[id].options.indexAxis=horizontal?"y":"x";charts[id].update("none");return}
+  charts[id]=new Chart(el,{type:"bar",data:{labels,datasets:[{data,borderWidth:0,borderRadius:4,backgroundColor:colors}]},options:{...chartBase,indexAxis:horizontal?"y":"x",plugins:{legend:{display:false},tooltip:{displayColors:false,callbacks:{label:c=>" Identified: "+fmt(c.raw)}}}}});
+}
+function makeDoughnut(id,items){
+  const el=document.getElementById(id),empty=getEmpty(id);if(!items.length){el.style.display="none";empty.style.display="flex";return}el.style.display="block";empty.style.display="none";
+  const labels=items.map(x=>x.label),data=items.map(x=>x.count),palette=items.map((_,i)=>i===0?IP_HOUSE_PALETTE[2]:(i===1?IP_HOUSE_PALETTE[0]:IP_HOUSE_PALETTE[1]));
+  if(charts[id]){charts[id].data.labels=labels;charts[id].data.datasets[0].data=data;charts[id].data.datasets[0].backgroundColor=palette;charts[id].update("none");return}
+  charts[id]=new Chart(el,{type:"doughnut",data:{labels,datasets:[{data,backgroundColor:palette,borderWidth:1,borderColor:"#fff"}]},options:{responsive:true,maintainAspectRatio:false,animation:false,cutout:"58%",plugins:{legend:{display:true,position:"right",labels:{boxWidth:10,font:{size:9},color:"#566579"}},tooltip:{callbacks:{label:c=>`${c.label}: ${fmt(c.raw)}`}}}}});
+}
+function makeLine(id,items){
+  const el=document.getElementById(id),empty=getEmpty(id);if(!items.length){el.style.display="none";empty.style.display="flex";return}el.style.display="block";empty.style.display="none";
+  const labels=items.map(x=>x.label),data=items.map(x=>x.count);
+  if(charts[id]){charts[id].data.labels=labels;charts[id].data.datasets[0].data=data;charts[id].update("none");return}
+  charts[id]=new Chart(el,{type:"line",data:{labels,datasets:[{data,borderColor:"#102A4C",backgroundColor:"rgba(127,143,163,.16)",pointBackgroundColor:"#FF914D",pointBorderColor:"#102A4C",pointRadius:3,tension:.28,fill:true}]},options:{...chartBase,plugins:{legend:{display:false},tooltip:{displayColors:false,callbacks:{label:c=>" Identified: "+fmt(c.raw)}}}}});
+}
+
+function parseNumber(v){
+  if(typeof v==='number' && Number.isFinite(v)) return v;
+  const s=norm(v).replace(/,/g,'').replace(/\s+/g,'');
+  if(!s)return 0;
+  const m=s.match(/-?\d+(?:\.\d+)?/);
+  return m?Number(m[0]):0;
+}
+function isSuspendedProfileStatus(v){
+  const s=key(v);
+  return s.includes('suspend') || s.includes('disabled') || s.includes('deactivated') || s.includes('blocked');
+}
+function uniqueProfileKey(r,c){
+  const raw=val(r,c.profileUrl);
+  if(raw)return raw.toLowerCase().trim();
+  // If profile URL is unavailable, fall back to a stable account/source identifier.
+  const fallback=val(r,c.source)||val(r,c.links);
+  return fallback?fallback.toLowerCase().trim():'';
+}
+function buildActionKpis(rows,c){
+  let removed=0;
+  const activeSource=new Map(), sourceTotal=new Map(), sourceRemoved=new Map();
+  const platformTotal=new Map(), platformRemoved=new Map();
+  const assetTotal=new Map(), assetRemoved=new Map();
+  const repeatEntity=new Map();
+  const suspendedProfiles=new Map();
+
+  // Repeat offender entity: prefer profile/account URL, then source/domain, then link.
+  const repeatCol=c.profileUrl||c.source||c.links;
+
+  // Linking URL Delisted KPI = delisted Linking records / total Linking records.
+  let linkingTotal=0, linkingRemoved=0;
+
+  for(const r of rows){
+    const rem=!!(c.removal&&isRemoved(val(r,c.removal)));
+    if(rem)removed++;
+
+    const p=val(r,c.platform)||"Unknown";
+    platformTotal.set(p,(platformTotal.get(p)||0)+1);
+    if(rem)platformRemoved.set(p,(platformRemoved.get(p)||0)+1);
+
+    const a=val(r,c.asset)||"Unknown";
+    assetTotal.set(a,(assetTotal.get(a)||0)+1);
+    if(rem)assetRemoved.set(a,(assetRemoved.get(a)||0)+1);
+
+    let source="";
+    if(c.source)source=extractDomain(val(r,c.source));
+    if(!source&&c.links)source=extractDomain(val(r,c.links));
+    source=source||"Unknown";
+    sourceTotal.set(source,(sourceTotal.get(source)||0)+1);
+    if(!rem)activeSource.set(source,(activeSource.get(source)||0)+1);
+    if(rem)sourceRemoved.set(source,(sourceRemoved.get(source)||0)+1);
+
+    if(repeatCol){
+      let entity=val(r,repeatCol);
+      if(repeatCol===c.source||repeatCol===c.links)entity=extractDomain(entity);
+      if(entity&&entity!=="Unknown")repeatEntity.set(entity,(repeatEntity.get(entity)||0)+1);
+    }
+
+    // Linking URL Delisted KPI:
+    // denominator = total Linking URL/Linking records
+    // numerator = only Linking records whose Status is Delisted
+    if(linkingRow(r,c)){
+      linkingTotal++;
+      if(c.status && isLinkingUrlDelistedStatus(val(r,c.status))) linkingRemoved++;
+    }
+
+    // Suspended profile KPI: deduplicate by profile URL and take subscriber count once.
+    if(c.profileStatus && isSuspendedProfileStatus(val(r,c.profileStatus))){
+      const pk=uniqueProfileKey(r,c);
+      if(pk && !suspendedProfiles.has(pk)){
+        suspendedProfiles.set(pk, c.subscribers ? parseNumber(r[c.subscribers]) : 0);
+      }
+    }
+  }
+
+  const repeatCount=[...repeatEntity.values()].filter(n=>n>1).length;
+  const topActive=topN(activeSource,1)[0]||null;
+  function interventionRate(totalMap,removedMap){
+    let candidates=[...totalMap.entries()].filter(([label,total])=>total>=5);
+    if(!candidates.length)candidates=[...totalMap.entries()];
+    let worst=null;
+    for(const [label,total] of candidates){
+      if(!total)continue;
+      const rate=(removedMap.get(label)||0)/total;
+      const candidate={label,total,removed:removedMap.get(label)||0,rate};
+      if(!worst||candidate.rate<worst.rate||candidate.rate===worst.rate&&candidate.total>worst.total)worst=candidate;
+    }
+    return worst;
+  }
+  const platformRate=interventionRate(platformTotal,platformRemoved);
+  const assetRate=interventionRate(assetTotal,assetRemoved);
+  const impactedSubscribers=[...suspendedProfiles.values()].reduce((a,b)=>a+b,0);
+  const linkingRate=linkingTotal?linkingRemoved/linkingTotal:0;
+
+  return {
+    backlog:Math.max(rows.length-removed,0),
+    repeatCount,
+    topActive,
+    platformRate,
+    assetRate,
+    linkingTotal,
+    linkingRemoved,
+    linkingRate,
+    suspendedProfileCount:suspendedProfiles.size,
+    impactedSubscribers
+  };
+}
+
+function updateKpis(s){
+  const identified=s.identified;
+  document.getElementById("kpiIdentified").textContent=fmt(identified);
+  const topP=topN(s.platform,1)[0];
+  document.getElementById("kpiPlatform").textContent=topP?fmt(topP.count):"0";
+  document.getElementById("kpiPlatformSub").textContent=topP?`Top platform: ${topP.label}`:"No platform data";
+  const topA=topN(s.asset,1)[0];
+  document.getElementById("kpiTopAsset").textContent=topA?topA.label:"—";
+  document.getElementById("kpiTopAssetSub").textContent=topA?`${fmt(topA.count)} identified`:"No asset data";
+  document.getElementById("kpiRemoval").textContent=identified?(s.removed/identified*100).toFixed(1)+"%":"0%";
+
+  const action=buildActionKpis(filteredRows,cols());
+  document.getElementById("kpiBacklog").textContent=fmt(action.backlog);
+  document.getElementById("kpiRepeat").textContent=fmt(action.repeatCount);
+  document.getElementById("kpiRepeatSub").textContent=action.repeatCount?"Unique sources/accounts with 2+ records":"No repeat source data";
+  document.getElementById("kpiActiveSource").textContent=action.topActive?action.topActive.label:"—";
+  document.getElementById("kpiActiveSourceSub").textContent=action.topActive?`${fmt(action.topActive.count)} active records`:"No active source data";
+  document.getElementById("kpiPlatformRemoval").textContent=action.platformRate?(action.platformRate.rate*100).toFixed(1)+"%":"0%";
+  document.getElementById("kpiPlatformRemovalSub").textContent=action.platformRate?`Lowest: ${action.platformRate.label} (${fmt(action.platformRate.removed)}/${fmt(action.platformRate.total)})`:"No platform data";
+  document.getElementById("kpiAssetRemoval").textContent=action.assetRate?(action.assetRate.rate*100).toFixed(1)+"%":"0%";
+  document.getElementById("kpiAssetRemovalSub").textContent=action.assetRate?`Lowest: ${action.assetRate.label} (${fmt(action.assetRate.removed)}/${fmt(action.assetRate.total)})`:"No asset data";
+  document.getElementById("kpiSuspendedProfiles").textContent=fmt(action.suspendedProfileCount);
+  document.getElementById("kpiSuspendedProfilesSub").textContent=action.suspendedProfileCount?"Unique suspended profiles":"No suspended profiles found";
+  document.getElementById("kpiImpactedSubscribers").textContent=fmt(action.impactedSubscribers);
+  document.getElementById("kpiImpactedSubscribersSub").textContent=action.suspendedProfileCount?"Subscribers from unique suspended profiles":"No subscriber data for suspended profiles";
+  document.getElementById("kpiLinking").textContent=action.linkingTotal?(action.linkingRate*100).toFixed(1)+"%":"0%";
+  document.getElementById("kpiLinkingSub").textContent=action.linkingTotal?`Delisted ${fmt(action.linkingRemoved)} of ${fmt(action.linkingTotal)} linking URLs`:"No linking URL records found";
+}
+
+function renderCharts(s,token){
+  if(token!==renderToken)return;
+  makeBar("platformChart",topN(s.platform,20),true);
+  requestAnimationFrame(()=>{if(token!==renderToken)return;makeDoughnut("statusChart",[{label:"Active",count:s.statusChart.Active},{label:"Removed",count:s.statusChart.Removed}]);
+    requestAnimationFrame(()=>{if(token!==renderToken)return;makeLine("weeklyChart",topN(s.week,100).sort(sortWeek));
+      requestAnimationFrame(()=>{if(token!==renderToken)return;makeLine("dayChart",topN(s.day,100).sort(sortDay));
+        requestAnimationFrame(()=>{if(token!==renderToken)return;makeBar("assetChart",topN(s.asset,10),true);makeBar("languageChart",topN(s.language,20),true);makeDoughnut("contentChart",topN(s.content,8));makeBar("sourceChart",topN(s.source,10),true);makeBar("analystChart",topN(s.analyst,20),true);
+        });
+      });
+    });
+  });
+}
+
+function render(){
+  const token=++renderToken;const c=cols();filteredRows=applyFilters();
+  const s=buildSummary(filteredRows,c);updateKpis(s);
+  document.getElementById("status").textContent=`Showing ${fmt(filteredRows.length)} of ${fmt(rawRows.length)} records • Columns detected: Platform=${c.platform||"—"}, Asset=${c.asset||"—"}, Week=${c.week||"—"}, Day=${c.day||"—"}, Source=${c.source||c.links||"—"}, Analyst=${c.analyst||"—"}, Removal=${c.removal||"—"}`;
+  renderCharts(s,token);
+  if(document.getElementById("summaryPage").style.display!=="none")updateExecutiveSummary();
+}
+
+function populateFilters(){const c=cols();fillSelect("platformFilter",uniqueValues(rawRows,c.platform));fillSelect("assetFilter",uniqueValues(rawRows,c.asset));fillSelect("languageFilter",uniqueValues(rawRows,c.language));fillSelect("contentFilter",uniqueValues(rawRows,c.content));fillSelect("weekFilter",uniqueValues(rawRows,c.week));}
+function resetFilters(){
+  ["platformFilter","assetFilter","languageFilter","contentFilter","weekFilter"].forEach(id=>document.getElementById(id).value="");
+  render();
+}
+
+const DATA_URL="data/dashboard-data.xlsx";
+let sourceFileBlob=null;
+
+async function loadBundledData(){
+  const started=performance.now();
+  document.getElementById("status").textContent="Loading dashboard-data.xlsx…";
+  try{
+    const url=DATA_URL+"?v="+Date.now();
+    const res=await fetch(url,{cache:"no-store"});
+    if(!res.ok)throw new Error("Source Excel not found ("+res.status+").");
+    sourceFileBlob=await res.blob();
+    const buffer=await sourceFileBlob.arrayBuffer();
+    const wb=XLSX.read(buffer,{type:"array",cellDates:true,cellNF:false,cellStyles:false});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    rawRows=XLSX.utils.sheet_to_json(ws,{defval:"",raw:true});
+    if(!rawRows.length)throw new Error("The source Excel contains no data rows.");
+    detectCols();
+    populateFilters();
+    const dateBounds=getUploadedDateBounds();
+    render();
+    document.getElementById("downloadSourceBtn").disabled=false;
+    document.getElementById("status").textContent=dateBounds.min&&dateBounds.max
+      ? `Loaded ${fmt(rawRows.length)} records from dashboard-data.xlsx • Identified date range: ${dateBounds.min} to ${dateBounds.max} • ${(performance.now()-started).toFixed(0)} ms`
+      : `Loaded ${fmt(rawRows.length)} records from dashboard-data.xlsx • ${(performance.now()-started).toFixed(0)} ms`;
+  }catch(err){
+    console.error(err);
+    rawRows=[];filteredRows=[];
+    document.getElementById("downloadSourceBtn").disabled=true;
+    document.getElementById("status").textContent="Could not load dashboard-data.xlsx. Upload that file to the dashboard's data folder in GitHub.";
+  }
+}
+
+async function downloadSourceExcel(){
+  try{
+    if(sourceFileBlob){
+      const a=document.createElement("a");
+      a.href=URL.createObjectURL(sourceFileBlob);
+      a.download="dashboard-data.xlsx";
+      document.body.appendChild(a);a.click();a.remove();
+      setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+      return;
+    }
+    const res=await fetch(DATA_URL+"?v="+Date.now(),{cache:"no-store"});
+    if(!res.ok)throw new Error("Source Excel not found.");
+    const blob=await res.blob();
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);a.download="dashboard-data.xlsx";
+    document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  }catch(err){
+    console.error(err);alert("Could not download the source Excel. Please check that data/dashboard-data.xlsx exists.");
+  }
+}
+
+document.getElementById("downloadSourceBtn").addEventListener("click",downloadSourceExcel);
+
+document.getElementById("resetBtn").addEventListener("click",resetFilters);
+["platformFilter","assetFilter","languageFilter","contentFilter","weekFilter"].forEach(id=>document.getElementById(id).addEventListener("change",render));
+
+function compactMetric(n){
+  n=Number(n||0);
+  const a=Math.abs(n);
+  if(a>=1000000){let v=(n/1000000);return (v>=10?v.toFixed(0):v.toFixed(2)).replace(/\.00$/,'')+'M'}
+  if(a>=1000){let v=(n/1000);return (v>=100?v.toFixed(0):v>=10?v.toFixed(1):v.toFixed(2)).replace(/\.0$/,'')+'K'}
+  return fmt(n);
+}
+function numericSubscribers(v){
+  const s=norm(v).replace(/,/g,'');
+  if(!s||s==='-')return 0;
+  const m=s.match(/([0-9]+(?:\.[0-9]+)?)([KMB])?/i); if(!m)return 0;
+  const n=parseFloat(m[1]); const u=(m[2]||'').toUpperCase();
+  return n*(u==='M'?1e6:u==='B'?1e9:u==='K'?1e3:1);
+}
+function uniqueProfileMetric(rows,c,platformSet){
+  const map=new Map(); let fallback=0;
+  for(const r of rows){
+    if(platformSet && !platformSet.has(key(val(r,c.platform)))) continue;
+    if(c.profileStatus && !key(val(r,c.profileStatus)).includes('suspend')) continue;
+    const profile=c.profileUrl?val(r,c.profileUrl):'';
+    const subs=c.subscribers?numericSubscribers(val(r,c.subscribers)):0;
+    if(profile && profile!=='-'){
+      const old=map.get(profile)||0; map.set(profile,Math.max(old,subs));
+    }else fallback++;
+  }
+  return {accounts:map.size+fallback, subscribers:[...map.values()].reduce((a,b)=>a+b,0)};
+}
+function buildExecutiveSummary(rows,c){
+  const platform=new Map(), asset=new Map();
+  for(const r of rows){if(c.platform)add(platform,val(r,c.platform));if(c.asset)add(asset,val(r,c.asset));}
+  const topP=topN(platform,1)[0]||{label:'—',count:0};
+  const topA=topN(asset,1)[0]||{label:'—',count:0};
+  let removed=0, linkingTotal=0, linkingRemoved=0, metaTotal=0, metaRemoved=0;
+  const meta=new Set(['facebook','instagram','threads','messenger']);
+  for(const r of rows){
+    const rem=c.removal&&isRemoved(val(r,c.removal));
+    if(rem)removed++;
+    const p=key(val(r,c.platform));
+    if(linkingRow(r,c)){linkingTotal++;if(c.status&&isLinkingUrlDelistedStatus(val(r,c.status)))linkingRemoved++;}
+    if(meta.has(p)){metaTotal++;if(rem)metaRemoved++;}
+  }
+  const pcol=c.profileUrl;
+  const suspAll=uniqueProfileMetric(rows,c,null);
+  const suspMetaYT=uniqueProfileMetric(rows,c,new Set(['facebook','instagram','youtube']));
+  // New-release titles: use categories containing "new" where available.
+  let newRows=rows;
+  if(c.category){const filtered=rows.filter(r=>key(val(r,c.category)).includes('new'));if(filtered.length)newRows=filtered;}
+  const newTitles=new Set(newRows.map(r=>val(r,c.asset)).filter(Boolean));
+  let newRemoved=0; for(const r of newRows) if(c.removal&&isRemoved(val(r,c.removal)))newRemoved++;
+  // Regional resource metric: if a dedicated restriction/status field exists, use it; otherwise use non-global country/region rows.
+  let regionalIdentified=0, regionalRestricted=0;
+  if(c.region){for(const r of rows){const rg=key(val(r,c.region));if(rg&&rg!=='global'){regionalIdentified++; if(c.removal&&isRemoved(val(r,c.removal)))regionalRestricted++;}}}
+  return {
+    identified:rows.length, topPlatform:topP, topAsset:topA, removalRate:rows.length?removed/rows.length:0,
+    linkingRate:linkingTotal?linkingRemoved/linkingTotal:0, metaRate:metaTotal?metaRemoved/metaTotal:0,
+    accounts:suspAll.accounts, subscribers:suspAll.subscribers, metaAccounts:suspMetaYT.accounts, metaSubscribers:suspMetaYT.subscribers,
+    newTitles:newTitles.size,newIdentified:newRows.length,newRemoved, regionalIdentified,regionalRestricted
+  };
+}
+function setSummaryText(id,text){const el=document.getElementById(id);if(el)el.textContent=text}
+function updateExecutiveSummary(){
+  if(!rawRows.length)return;
+  const s=buildExecutiveSummary(applyFilters(),cols());
+  setSummaryText('sumIdentified','~'+compactMetric(s.identified));
+  setSummaryText('sumPlatformName','TOP PLATFORM : '+s.topPlatform.label);
+  setSummaryText('sumPlatformCount',compactMetric(s.topPlatform.count));
+  setSummaryText('sumAssetName','TOP TITLE : '+s.topAsset.label);
+  setSummaryText('sumAssetCount',compactMetric(s.topAsset.count));
+  setSummaryText('sumRemoval',Math.round(s.removalRate*100)+'%');
+  setSummaryText('sumLinking','~'+Math.round(s.linkingRate*100)+'%');
+  setSummaryText('sumMetaRemoval',Math.round(s.metaRate*100)+'%');
+  setSummaryText('sumAccounts',fmt(s.accounts));
+  setSummaryText('sumSubscribers',compactMetric(s.subscribers));
+  setSummaryText('sumMetaAccounts',fmt(s.metaAccounts));
+  setSummaryText('sumMetaSubscribers',compactMetric(s.metaSubscribers));
+  setSummaryText('sumNewTitleLabel',s.newTitles+'- NEW RELEASED TITLES');
+  setSummaryText('sumNewTitles','');
+  setSummaryText('sumNewIdentified','Identified Links : '+fmt(s.newIdentified));
+  setSummaryText('sumNewRemoved','Removed : '+fmt(s.newRemoved)+' ('+(s.newIdentified?Math.round(s.newRemoved/s.newIdentified*100):0)+'%)');
+  setSummaryText('sumRegionalIdentified','Identified – '+fmt(s.regionalIdentified));
+  setSummaryText('sumRegionalRestricted','Restricted – '+fmt(s.regionalRestricted)+' ('+(s.regionalIdentified?Math.round(s.regionalRestricted/s.regionalIdentified*100):0)+'%)');
+}
+function showSummary(show){
+  document.querySelector('.grid').style.display=show?'none':'';
+  document.querySelector('.kpis').style.display=show?'none':'';
+  document.querySelector('.filters').style.display=show?'none':'';
+  document.getElementById('summaryPage').style.display=show?'block':'none';
+  document.getElementById('summaryBtn').style.display=show?'none':'';
+  if(show)updateExecutiveSummary();
+}
+async function imageToDataUrl(url){
+  const res=await fetch(url);const blob=await res.blob();
+  return await new Promise((resolve,reject)=>{const fr=new FileReader();fr.onload=()=>resolve(fr.result);fr.onerror=reject;fr.readAsDataURL(blob);});
+}
+
+function applyTheme(name){const root=document.documentElement;const themes={sample:{bg:"#eef1f5",panel:"#ffffff",panel2:"#f5f6f8",text:"#12243a",muted:"#6d7b8f",line:"#d6dce5",navy:"#17365d",blue:"#315f91",orange:"#f4a43a",orange2:"#ffbf5b",kpiBlue:"#DCE8F3",kpiYellow:"#FFC86A"},iphouse:{bg:"#F1F3F6",panel:"#FFFFFF",panel2:"#F7F8FA",text:"#102A4C",muted:"#68778A",line:"#D5DCE5",navy:"#102A4C",blue:"#3B5F88",orange:"#FF914D",orange2:"#FFC86A",kpiBlue:"#DCE8F3",kpiYellow:"#FFC86A"},dark:{bg:"#151a21",panel:"#202731",panel2:"#252d38",text:"#eef3f8",muted:"#aab5c2",line:"#3a4654",navy:"#dce6f1",blue:"#8eabc7",orange:"#f4a43a",orange2:"#ffbf5b",kpiBlue:"#34485c",kpiYellow:"#6a5725"},slate:{bg:"#e8edf2",panel:"#f9fafb",panel2:"#eef2f6",text:"#1f2937",muted:"#64748b",line:"#cbd5e1",navy:"#334155",blue:"#64748b",orange:"#f59e0b",orange2:"#fbbf24",kpiBlue:"#dbe7f2",kpiYellow:"#ffe08a"},amber:{bg:"#f1f0ec",panel:"#ffffff",panel2:"#f7f5ef",text:"#29261f",muted:"#766f63",line:"#d9d3c7",navy:"#252525",blue:"#4b5563",orange:"#d9912b",orange2:"#f2b95e",kpiBlue:"#dfe8f0",kpiYellow:"#ffd36b"}};const t=themes[name]||themes.sample;Object.entries(t).forEach(([k,v])=>root.style.setProperty("--"+k,v))}
+document.getElementById("themeSelect").addEventListener("change",e=>applyTheme(e.target.value));
+function setZoom(z){zoom=Math.max(.7,Math.min(1.5,z));document.getElementById("app").style.zoom=zoom;document.getElementById("zoomValue").textContent=Math.round(zoom*100)+"%"}
+document.getElementById("zoomIn").addEventListener("click",()=>setZoom(zoom+.1));document.getElementById("zoomOut").addEventListener("click",()=>setZoom(zoom-.1));document.getElementById("zoomReset").addEventListener("click",()=>setZoom(1));
+document.getElementById("summaryBtn").addEventListener("click",()=>showSummary(true));
+document.getElementById("backDashboardBtn").addEventListener("click",()=>showSummary(false));
+applyTheme("iphouse");setZoom(1);
+loadBundledData();
+</script>
+</body>
+</html>
