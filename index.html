@@ -163,6 +163,7 @@ button,input,select{font:inherit}
 .card h3{
   margin:0 0 9px;
   font-size:14px;
+  font-weight:800;
   color:var(--navy);
 }
 .chartWrap{height:260px;position:relative}
@@ -402,10 +403,10 @@ button,input,select{font:inherit}
       <div class="sumText sum12a" id="sumRegionalIdentified">Identified – 0</div>
       <div class="sumText sum12b" id="sumRegionalRestricted">Restricted – 0 (0%)</div>
     </div>
-    <div class="summaryNote">All values on this page are recalculated from the currently uploaded and filtered data. Where the uploaded file does not contain a required field, the corresponding metric is omitted or treated as unavailable.</div>
+    <div class="summaryNote">All values on this page are recalculated from the currently uploaded and filtered data. Where the uploaded file does not contain a required field, the corresponding metric is omitted.</div>
   </section>
 
-  <div class="footer">Dashboard recalculates directly from the latest dashboard-data.xlsx file. Action KPIs include Active Backlog, Repeat Offenders, Top Active Source, Platform-wise Removal Rate, Asset-wise Removal Rate, Suspended Profiles, Impacted Subscribers, and Linking URL Delisted values.</div>
+  <div class="footer">Dashboard recalculates directly from the latest dashboard-data.xlsx file. Action KPIs include Active Backlog, Repeat Offenders, Top Active Source, Platform-wise Removal Rate, Asset-wise Removal Rate, Suspended Profiles, Impacted Subscribers, and Delisted Linking URLs.</div>
 
 <script>
 /* FAST V5 ENGINE
@@ -414,7 +415,7 @@ button,input,select{font:inherit}
    - Aggregate all dashboard metrics in one pass
    - Reuse Chart.js instances instead of destroying/recreating them
    - Render charts in small idle-time batches so KPIs appear immediately
-*/
+ */
 let rawRows = [];
 let filteredRows = [];
 let charts = {};
@@ -496,10 +497,10 @@ function fmt(n){return Number(n||0).toLocaleString("en-IN")}
 function pct(n,d){return d?((n/d)*100).toFixed(1)+"%":"0%"}
 function topN(map,n=10){return [...map.entries()].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0])).slice(0,n).map(([label,count])=>({label,count}))}
 function add(map,v){v=v||"Unknown";map.set(v,(map.get(v)||0)+1)}
-function sortWeek(a,b){const na=parseInt(String(a.label).match(/\d+/)?.[0]||"",10),nb=parseInt(String(b.label).match(/\d+/)?.[0]||"",10);if(Number.isFinite(na)&&Number.isFinite(nb))return na-nb;return String(a.label).localeCompare(String(b.label));}
-function sortDay(a,b){const order={sun:0,sunday:0,mon:1,monday:1,tue:2,tuesday:2,wed:3,wednesday:3,thu:4,thursday:4,fri:5,friday:5,sat:6,saturday:6};const aa=order[key(a.label)],bb=order[key(b.label)];if(Number.isFinite(aa)&&Number.isFinite(bb))return aa-bb;return String(a.label).localeCompare(String(b.label));}
+function sortWeek(a,b){const na=parseInt(String(a.label).match(/\d+/)?.[0]||"",10),nb=parseInt(String(b.label).match(/\d+/)?.[0]||"",10);if(Number.isFinite(na)&&Number.isFinite(nb))return na-nb;return String(a.label).localeCompare(String(b.label))}
+function sortDay(a,b){const order={sun:0,sunday:0,mon:1,monday:1,tue:2,tuesday:2,wed:3,wednesday:3,thu:4,thursday:4,fri:5,friday:5,sat:6,saturday:6};const aa=order[key(a.label)],bb=order[key(b.label)];if(Number.isFinite(aa)&&Number.isFinite(bb))return aa-bb;return String(a.label).localeCompare(String(b.label))}
 function extractDomain(v){
-  const s=norm(v);if(!s)return "";try{const u=new URL(/^https?:\/\//i.test(s)?s:"https://"+s);return u.hostname.replace(/^www\./i,"")}catch(e){const m=s.match(/(?:https?:\/\/)?(?:www\.)?([^\/\s?#]+)/i);return m?m[1].toLowerCase():""}
+  const s=norm(v);if(!s)return "";try{const u=new URL(/^https?:\/\//i.test(s)?s:"https://"+s);return u.hostname.replace(/^www\./i,"")}catch(e){const m=s.match(/(?:https?:\/\/)?(?:www\.)?([^\/\s?#[...])/i);return m?m[1]:""}
 }
 function isLinkingValue(v){
   const s=key(v);
@@ -591,26 +592,38 @@ function buildSummary(rows,c){
 const IP_HOUSE_PALETTE=["#FF914D","#7F8FA3","#17365D","#AEB8C4","#D9E0E7"];
 const IP_HOUSE_KPI_BLUE="#DCE8F3";
 const IP_HOUSE_KPI_YELLOW="#FFC86A";
-const chartBase={responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false},tooltip:{displayColors:false}},scales:{x:{grid:{display:false},ticks:{color:"#68778a",font:{size:10}}},y:{grid:{color:"rgba(16,42,76,0.08)"},ticks:{color:"#68778a",font:{size:10}}}}};
+const chartBase={
+  responsive:true,
+  maintainAspectRatio:false,
+  animation:false,
+  plugins:{
+    legend:{display:false,labels:{color:"#12243a",font:{weight:"bold",size:11}}},
+    tooltip:{displayColors:false,titleFont:{weight:"bold",size:12},bodyFont:{weight:"bold",size:11}}
+  },
+  scales:{
+    x:{grid:{display:false},ticks:{color:"#68778a",font:{size:11,weight:"bold"}},title:{color:"#17365d",font:{size:11,weight:"bold"}}},
+    y:{grid:{color:"rgba(113,129,146,0.18)",border:{display:false}},ticks:{color:"#68778a",font:{size:11,weight:"bold"}},title:{color:"#17365d",font:{size:11,weight:"bold"}}}
+  }
+};
 function getEmpty(id){return document.getElementById(id.replace("Chart","Empty"))}
 function makeBar(id,items,horizontal=false){
   const el=document.getElementById(id),empty=getEmpty(id);if(!items.length){if(charts[id]){charts[id].data.labels=[];charts[id].data.datasets[0].data=[];charts[id].update("none")}el.style.display="none";empty.style.display="flex";return}
   el.style.display="block";empty.style.display="none";const labels=items.map(x=>x.label),data=items.map(x=>x.count);
   const colors=labels.map((_,i)=>i===0?IP_HOUSE_PALETTE[0]:IP_HOUSE_PALETTE[1]);
   if(charts[id]){charts[id].data.labels=labels;charts[id].data.datasets[0].data=data;charts[id].data.datasets[0].backgroundColor=colors;charts[id].options.indexAxis=horizontal?"y":"x";charts[id].update("none");return}
-  charts[id]=new Chart(el,{type:"bar",data:{labels,datasets:[{data,borderWidth:0,borderRadius:4,backgroundColor:colors}]},options:{...chartBase,indexAxis:horizontal?"y":"x",plugins:{legend:{display:false},tooltip:{displayColors:false}},scales:{x:{grid:{display:false},ticks:{color:"#68778a",font:{size:10}}},y:{grid:{color:"rgba(16,42,76,0.08)"},ticks:{color:"#68778a",font:{size:10}}}}}});
+  charts[id]=new Chart(el,{type:"bar",data:{labels,datasets:[{data,borderWidth:0,borderRadius:4,backgroundColor:colors}]},options:{...chartBase,indexAxis:horizontal?"y":"x",plugins:{...chartBase.plugins,legend:{display:false,labels:{color:"#12243a",font:{weight:"bold",size:11}}}},scales:{...chartBase.scales,x:{...chartBase.scales.x,ticks:{...chartBase.scales.x.ticks,font:{size:11,weight:"bold"}}},y:{...chartBase.scales.y,ticks:{...chartBase.scales.y.ticks,font:{size:11,weight:"bold"}}}}}});
 }
 function makeDoughnut(id,items){
   const el=document.getElementById(id),empty=getEmpty(id);if(!items.length){el.style.display="none";empty.style.display="flex";return}el.style.display="block";empty.style.display="none";
   const labels=items.map(x=>x.label),data=items.map(x=>x.count),palette=items.map((_,i)=>i===0?IP_HOUSE_PALETTE[2]:(i===1?IP_HOUSE_PALETTE[0]:IP_HOUSE_PALETTE[1]));
   if(charts[id]){charts[id].data.labels=labels;charts[id].data.datasets[0].data=data;charts[id].data.datasets[0].backgroundColor=palette;charts[id].update("none");return}
-  charts[id]=new Chart(el,{type:"doughnut",data:{labels,datasets:[{data,backgroundColor:palette,borderWidth:1,borderColor:"#fff"}]},options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:true,position:"bottom",labels:{color:"#68778a",font:{size:10}}},tooltip:{displayColors:false}}}});
+  charts[id]=new Chart(el,{type:"doughnut",data:{labels,datasets:[{data,backgroundColor:palette,borderWidth:1,borderColor:"#fff"}]},options:{...chartBase,plugins:{...chartBase.plugins,legend:{display:true,position:"bottom",labels:{color:"#12243a",boxWidth:10,font:{size:10,weight:"bold"}}}}}});
 }
 function makeLine(id,items){
   const el=document.getElementById(id),empty=getEmpty(id);if(!items.length){el.style.display="none";empty.style.display="flex";return}el.style.display="block";empty.style.display="none";
   const labels=items.map(x=>x.label),data=items.map(x=>x.count);
   if(charts[id]){charts[id].data.labels=labels;charts[id].data.datasets[0].data=data;charts[id].update("none");return}
-  charts[id]=new Chart(el,{type:"line",data:{labels,datasets:[{data,borderColor:"#102A4C",backgroundColor:"rgba(127,143,163,.16)",pointBackgroundColor:"#FF914D",pointBorderColor:"#102A4C",pointRadius:3,tension:0.3}]},options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false},tooltip:{displayColors:false}},scales:{x:{grid:{display:false},ticks:{color:"#68778a",font:{size:10}}},y:{grid:{color:"rgba(16,42,76,0.08)"},ticks:{color:"#68778a",font:{size:10}}}}}});
+  charts[id]=new Chart(el,{type:"line",data:{labels,datasets:[{data,borderColor:"#102A4C",backgroundColor:"rgba(127,143,163,.16)",pointBackgroundColor:"#FF914D",pointBorderColor:"#102A4C",pointRadius:3,borderWidth:2}]},options:{...chartBase,plugins:{...chartBase.plugins,legend:{display:false,labels:{color:"#12243a",font:{weight:"bold",size:11}}}},scales:{...chartBase.scales,x:{...chartBase.scales.x,ticks:{...chartBase.scales.x.ticks,font:{size:11,weight:"bold"}}},y:{...chartBase.scales.y,ticks:{...chartBase.scales.y.ticks,font:{size:11,weight:"bold"}}}}}});
 }
 
 function parseNumber(v){
@@ -748,7 +761,7 @@ function renderCharts(s,token){
   requestAnimationFrame(()=>{if(token!==renderToken)return;makeDoughnut("statusChart",[{label:"Active",count:s.statusChart.Active},{label:"Removed",count:s.statusChart.Removed}]);
     requestAnimationFrame(()=>{if(token!==renderToken)return;makeLine("weeklyChart",topN(s.week,100).sort(sortWeek));
       requestAnimationFrame(()=>{if(token!==renderToken)return;makeLine("dayChart",topN(s.day,100).sort(sortDay));
-        requestAnimationFrame(()=>{if(token!==renderToken)return;makeBar("assetChart",topN(s.asset,10),true);makeBar("languageChart",topN(s.language,20),true);makeDoughnut("contentChart",topN(s.content,20));makeBar("sourceChart",topN(s.source,10),true);makeBar("analystChart",topN(s.analyst,20),true);});
+        requestAnimationFrame(()=>{if(token!==renderToken)return;makeBar("assetChart",topN(s.asset,10),true);makeBar("languageChart",topN(s.language,20),true);makeDoughnut("contentChart",topN(s.content,10));makeBar("sourceChart",topN(s.source,10),true);makeBar("analystChart",topN(s.analyst,20),true);});
       });
     });
   });
@@ -757,7 +770,7 @@ function renderCharts(s,token){
 function render(){
   const token=++renderToken;const c=cols();filteredRows=applyFilters();
   const s=buildSummary(filteredRows,c);updateKpis(s);
-  document.getElementById("status").textContent=`Showing ${fmt(filteredRows.length)} of ${fmt(rawRows.length)} records • Columns detected: Platform=${c.platform||"—"}, Asset=${c.asset||"—"}, Language=${c.language||"—"}, Content=${c.content||"—"}, Week=${c.week||"—"}`;
+  document.getElementById("status").textContent=`Showing ${fmt(filteredRows.length)} of ${fmt(rawRows.length)} records • Columns detected: Platform=${c.platform||"—"}, Asset=${c.asset||"—"}, Language=${c.language||"—"}, Status=${c.status||"—"}`;
   renderCharts(s,token);
   if(document.getElementById("summaryPage").style.display!=="none")updateExecutiveSummary();
 }
@@ -951,7 +964,7 @@ function showSummary(show){
   if(show)updateExecutiveSummary();
 }
 
-function applyTheme(name){const root=document.documentElement;const themes={sample:{bg:"#eef1f5",panel:"#ffffff",panel2:"#f5f6f8",text:"#12243a",muted:"#6d7b8f",line:"#d6dce5",navy:"#17365d",blue:"#315f91",orange:"#f4a43a",orange2:"#ffbf5b",dark:"#17212f"},dark:{bg:"#10181f",panel:"#1d2a35",panel2:"#243645",text:"#e6edf6",muted:"#a4b5c6",line:"#2c3d4e",navy:"#c9d9f0",blue:"#7aa7d8",orange:"#f7b75c",orange2:"#f7d17b",dark:"#0d141b"},slate:{bg:"#edf3f8",panel:"#ffffff",panel2:"#f4f7fb",text:"#1b2d3d",muted:"#6a7d92",line:"#d4dfe9",navy:"#1f4a6d",blue:"#3a6d9d",orange:"#eea23c",orange2:"#ffca6d",dark:"#182837"},amber:{bg:"#f5f3ee",panel:"#ffffff",panel2:"#f9f4ef",text:"#1d1d1d",muted:"#7c6a4d",line:"#e7dcc6",navy:"#544637",blue:"#7d6d59",orange:"#d9a74a",orange2:"#efc969",dark:"#2a241d"},iphouse:{bg:"#eef1f5",panel:"#ffffff",panel2:"#f5f6f8",text:"#12243a",muted:"#6d7b8f",line:"#d6dce5",navy:"#17365d",blue:"#315f91",orange:"#f4a43a",orange2:"#ffbf5b",dark:"#17212f"}};
+function applyTheme(name){const root=document.documentElement;const themes={sample:{bg:"#eef1f5",panel:"#ffffff",panel2:"#f5f6f8",text:"#12243a",muted:"#6d7b8f",line:"#d6dce5",navy:"#17365d",blue:"#315f91",orange:"#f4a43a",orange2:"#ffbf5b",dark:"#17212f"},iphouse:{bg:"#eef1f5",panel:"#ffffff",panel2:"#f5f6f8",text:"#12243a",muted:"#6d7b8f",line:"#d6dce5",navy:"#17365d",blue:"#315f91",orange:"#f4a43a",orange2:"#ffbf5b",dark:"#17212f"},dark:{bg:"#111827",panel:"#1f2937",panel2:"#374151",text:"#f3f4f6",muted:"#cbd5e1",line:"#475569",navy:"#93c5fd",blue:"#60a5fa",orange:"#fbbf24",orange2:"#facc15",dark:"#020817"},slate:{bg:"#edf2f7",panel:"#ffffff",panel2:"#f8fafc",text:"#1e293b",muted:"#64748b",line:"#cbd5e1",navy:"#1d4ed8",blue:"#2563eb",orange:"#f59e0b",orange2:"#fbbf24",dark:"#0f172a"},amber:{bg:"#f3f4f6",panel:"#ffffff",panel2:"#f9fafb",text:"#111827",muted:"#6b7280",line:"#d1d5db",navy:"#374151",blue:"#4b5563",orange:"#f59e0b",orange2:"#fbbf24",dark:"#111827"}};
   const theme=themes[name]||themes.iphouse; Object.entries(theme).forEach(([k,v])=>root.style.setProperty(`--${k}`,v));}
 document.getElementById("themeSelect").addEventListener("change",e=>applyTheme(e.target.value));
 function setZoom(z){zoom=Math.max(.7,Math.min(1.5,z));document.getElementById("app").style.zoom=zoom;document.getElementById("zoomValue").textContent=Math.round(zoom*100)+"%"}
